@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::prelude::*;
+use std::io::{prelude::*, Write};
 use std::{env, mem};
 
 fn main() {
@@ -11,7 +11,12 @@ fn main() {
 
     let mut pcd_lines = Vec::<Vec<f32>>::new();
     to_pcd(&buffer, &mut pcd_lines);
+
+    let output_filename = "./src/data/0000000000.pcd";
+    output_pcd_file(output_filename, &pcd_lines);
 }
+
+const PCD_ELEMS: usize = 4; // [x, y, z, i]
 
 fn read_binary_file(filename: &str, mut buffer: &mut Vec<u8>) {
     let mut f = File::open(filename).expect("file not found");
@@ -19,8 +24,6 @@ fn read_binary_file(filename: &str, mut buffer: &mut Vec<u8>) {
 }
 
 fn to_pcd(input_buffer: &Vec<u8>, output_pcd_lines: &mut Vec<Vec<f32>>) {
-    const PCD_ELEMS: usize = 4; // [x, y, z, i]
-
     let bytes_of_f32 = mem::size_of::<f32>();
     let bytes_per_line = bytes_of_f32 * PCD_ELEMS;
     let lines = input_buffer.len() / bytes_per_line;
@@ -39,6 +42,23 @@ fn to_pcd(input_buffer: &Vec<u8>, output_pcd_lines: &mut Vec<Vec<f32>>) {
             }
         }
         output_pcd_lines.push(pcd);
+    }
+}
+
+fn output_pcd_file(output_filename: &str, pcd_lines: &Vec<Vec<f32>>) {
+    let mut file = File::create(output_filename).expect("new file not created");
+    for pcd in pcd_lines {
+        let mut line_str = "".to_string();
+        for (count, &elem) in pcd.iter().enumerate() {
+            line_str.push_str(elem.to_string().as_str());
+            if count != PCD_ELEMS - 1 {
+                line_str.push(' ');
+            } else {
+                line_str.push('\n');
+            }
+        }
+        file.write_all(line_str.as_bytes())
+            .expect("pcd data not write");
     }
 }
 
