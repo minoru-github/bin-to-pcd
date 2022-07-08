@@ -47,6 +47,9 @@ fn to_pcd(input_buffer: &Vec<u8>, output_pcd_lines: &mut Vec<Vec<f32>>) {
 
 fn output_pcd_file(output_filename: &str, pcd_lines: &Vec<Vec<f32>>) {
     let mut file = File::create(output_filename).expect("new file not created");
+
+    write_pcd_header(pcd_lines.len(), &mut file);
+
     for pcd in pcd_lines {
         let mut line_str = "".to_string();
         for (count, &elem) in pcd.iter().enumerate() {
@@ -58,7 +61,35 @@ fn output_pcd_file(output_filename: &str, pcd_lines: &Vec<Vec<f32>>) {
             }
         }
         file.write_all(line_str.as_bytes())
-            .expect("pcd data not write");
+            .expect("pcd data not written");
+    }
+}
+
+fn write_pcd_header(lines: usize, file: &mut File) {
+    let mut write_line = |header: &str| {
+        let header = header.to_string() + "\n";
+        file.write_all(header.as_bytes())
+            .expect("header not written")
+    };
+
+    let width = "WIDTH ".to_string() + lines.to_string().as_str();
+    let points = "POINTS ".to_string() + lines.to_string().as_str();
+
+    let str_vec = [
+        "VERSION 0.7",
+        "FIELDS x y z i",
+        "SIZE 4 4 4 4",
+        "TYPE F F F F",
+        "COUNT 1 1 1 1",
+        width.as_str(),
+        "HEIGHT 1",
+        "VIEWPOINT 0.0 0.0 0.0 1.0 0.0 0.0 0.0",
+        points.as_str(),
+        "DATA ascii",
+    ];
+
+    for str in str_vec {
+        write_line(str);
     }
 }
 
