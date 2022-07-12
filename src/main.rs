@@ -6,14 +6,22 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let path = &args[1];
 
+    let offset;
+    if args.len() >= 3 {
+        offset = Offset::new(&args[2], &args[3], &args[4]);
+    } else {
+        let init_value = &"0.0".to_string();
+        offset = Offset::new(init_value, init_value, init_value);
+    }
+
     let mut buffer = Vec::new();
     println!("{}", path);
     read_binary_file(&path, &mut buffer);
 
     let mut pcd_lines = Vec::<Vec<f32>>::new();
-    to_pcd(&buffer, &mut pcd_lines);
+    to_pcd(&buffer, &offset, &mut pcd_lines);
 
-    let mut output_path = path[0..path.len()-4].to_string();
+    let mut output_path = path[0..path.len() - 4].to_string();
     output_path.push_str(".pcd");
     println!("out {}", output_path);
 
@@ -27,21 +35,40 @@ fn read_binary_file(path: &str, mut buffer: &mut Vec<u8>) {
     f.read_to_end(&mut buffer).expect("read error");
 }
 
-fn to_pcd(input_buffer: &Vec<u8>, output_pcd_lines: &mut Vec<Vec<f32>>) {
+struct Offset {
+    x_m: f32,
+    y_m: f32,
+    z_m: f32,
+}
+
+impl Offset {
+    pub fn new(x_m: &String, y_m: &String, z_m: &String) -> Self {
+        Offset {
+            x_m: x_m.parse::<f32>().unwrap(),
+            y_m: y_m.parse::<f32>().unwrap(),
+            z_m: z_m.parse::<f32>().unwrap(),
+        }
+    }
+}
+
+fn to_pcd(input_buffer: &Vec<u8>, offset: &Offset, output_pcd_lines: &mut Vec<Vec<f32>>) {
     let bytes_of_f32 = mem::size_of::<f32>();
     let bytes_per_line = bytes_of_f32 * PCD_ELEMS;
     let lines = input_buffer.len() / bytes_per_line;
+
+    let offset_vec = [offset.x_m, offset.y_m, offset.z_m, 0.0];
 
     let ptr = input_buffer.as_ptr();
     let mut ptr_offset = 0;
     for _ in 0..lines {
         // xyzi
         let mut pcd = Vec::new();
-        for _ in 0..PCD_ELEMS {
+        for index in 0..PCD_ELEMS {
             unsafe {
                 let array_u8 = std::slice::from_raw_parts(ptr.add(ptr_offset), bytes_of_f32);
-                let data = (array_u8 as *const [u8]) as *const f32;
-                pcd.push(*data);
+                let data_ptr = (array_u8 as *const [u8]) as *const f32;
+                let data = *data_ptr + offset_vec[index];
+                pcd.push(data);
                 ptr_offset += bytes_of_f32;
             }
         }
@@ -106,5 +133,24 @@ fn debug_pcd(pcd_lines: &Vec<Vec<f32>>) {
         if cnt >= 10 {
             break;
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Offset;
+    #[test]
+    fn test_offset() {
+        let x_m = 1.234 as f32;
+        let y_m = 0.0 as f32;
+        let z_m = -999.999 as f32;
+        let offset = Offset::new(
+            &"1.234".to_string(),
+            &"0.0".to_string(),
+            &"-999.999".to_string(),
+        );
+        assert_eq!(x_m, offset.x_m);
+        assert_eq!(y_m, offset.y_m);
+        assert_eq!(z_m, offset.z_m);
     }
 }
