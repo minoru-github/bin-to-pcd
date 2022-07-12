@@ -3,23 +3,27 @@ use std::io::{prelude::*, Write};
 use std::{env, mem};
 
 fn main() {
-    //let args: Vec<String> = env::args().collect();
-    //let filename = &args[1];
-    let filename = "./src/data/0000000000.bin";
+    let args: Vec<String> = env::args().collect();
+    let path = &args[1];
+
     let mut buffer = Vec::new();
-    read_binary_file(filename, &mut buffer);
+    println!("{}", path);
+    read_binary_file(&path, &mut buffer);
 
     let mut pcd_lines = Vec::<Vec<f32>>::new();
     to_pcd(&buffer, &mut pcd_lines);
 
-    let output_filename = "./src/data/0000000000.pcd";
-    output_pcd_file(output_filename, &pcd_lines);
+    let mut output_path = path[0..path.len()-4].to_string();
+    output_path.push_str(".pcd");
+    println!("out {}", output_path);
+
+    output_pcd_file(&output_path, &pcd_lines);
 }
 
 const PCD_ELEMS: usize = 4; // [x, y, z, i]
 
-fn read_binary_file(filename: &str, mut buffer: &mut Vec<u8>) {
-    let mut f = File::open(filename).expect("file not found");
+fn read_binary_file(path: &str, mut buffer: &mut Vec<u8>) {
+    let mut f = File::open(path).expect("file not found");
     f.read_to_end(&mut buffer).expect("read error");
 }
 
